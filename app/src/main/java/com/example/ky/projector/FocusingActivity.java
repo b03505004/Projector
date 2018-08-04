@@ -14,6 +14,7 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -27,6 +28,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
     TextView focusValue;
     int frameCounter;
     ImageView smallImg;
+    Bitmap bitmap;
 
     BaseLoaderCallback mLoaderCallBack = new BaseLoaderCallback(this) {
         @Override
@@ -130,8 +132,10 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                 public void run() {
                     DecimalFormat df = new DecimalFormat("0.00");
                     focusValue.setText(df.format(varianceOfLaplacian(imgGrayFinal)));
+                    bitmap = Bitmap.createBitmap(imgGraySmall.cols(), imgGraySmall.rows(), Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(imgGraySmall, bitmap);
 
-                    smallImg.setImageBitmap(new Bitmap(imgGraySmall));
+                    smallImg.setImageBitmap(bitmap);
                 }
             });
         }
