@@ -1,5 +1,6 @@
 package com.example.ky.projector;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.icu.text.DecimalFormat;
 import android.os.AsyncTask;
@@ -7,6 +8,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceView;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -79,6 +82,9 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_focusing);
         javaCameraView = (JavaCameraView) findViewById(R.id.java_camera_view);
         javaCameraView.setVisibility(SurfaceView.VISIBLE);
@@ -87,8 +93,8 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         focusValue = (TextView) findViewById(R.id.focusValue);
         frameCounter = 0;
         smallImg = (ImageView) findViewById(R.id.imageView);
-        focusTask startFocusing = new focusTask();
-        
+        //focusTask startFocusing = new focusTask();
+        //focusTask.execute();
     }
 
     @Override
@@ -148,8 +154,10 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    double fv = varianceOfLaplacian(imgGrayFinal);
                     DecimalFormat df = new DecimalFormat("0.00");
-                    focusValue.setText(df.format(varianceOfLaplacian(imgGrayFinal)));
+                    focusValue.setText(df.format(fv));
+                    Log.i("Focus Val", ""+fv);
                     bitmap = Bitmap.createBitmap(imgGraySmall.cols(), imgGraySmall.rows(), Bitmap.Config.ARGB_8888);
                     Utils.matToBitmap(imgGraySmall, bitmap);
 
@@ -188,7 +196,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                     instruction = bufferedReader.readLine();
                     Log.i("SOCKET READ", instruction);
                     if (instruction != null) {
-                        if (instruction == "N") {
+                        if (instruction.equals("N")) {
                             imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
                             focusValue = varianceOfLaplacian(imgGraySmall);
                             if (focusValue >= bestFocusValue) {
@@ -199,10 +207,12 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                             //printWriter.write(doneAck);
                             //printWriter.flush();
 
-                        } else if (instruction == "F") {
+                        } else if (instruction.equals("F")) {
                             toContinue = false;
                             printWriter.write(""+bestStep);
                             printWriter.flush();
+                            Intent i = new Intent(FocusingActivity.this, DoneActivity.class);
+                            startActivity(i);
                         }
                     }
                 }

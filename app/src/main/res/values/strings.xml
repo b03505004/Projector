@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Projector</string>
     <string name="focusB">Start focusing!</string>
-    <string name="fm">variance of Laplacian</string>
+    <string name="fm">focus val</string>
+    <string name="done">DONE!</string>
 </resources>
