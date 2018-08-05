@@ -2,6 +2,7 @@ package com.example.ky.projector;
 
 import android.graphics.Bitmap;
 import android.icu.text.DecimalFormat;
+import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,14 +22,31 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+
 public class FocusingActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
     private static  String TAG = "FocusingActivity";
+    private static Socket socket;
+    private static BufferedReader bufferedReader;
+    private static PrintWriter printWriter;
+    private static String ip = "1234";
+    private static int stepCounter = 0;
+    private static int bestStep = 0;
+    private static double bestFocusValue = 0.0;
+    private static String doneAck = "D";
+
+
     JavaCameraView javaCameraView;
     Mat mRgba, imgGray, imgGraySmall, imgGrayFinal;//, imgCanny;
     TextView focusValue;
     int frameCounter;
     ImageView smallImg;
     Bitmap bitmap;
+
 
     BaseLoaderCallback mLoaderCallBack = new BaseLoaderCallback(this) {
         @Override
@@ -69,6 +87,8 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         focusValue = (TextView) findViewById(R.id.focusValue);
         frameCounter = 0;
         smallImg = (ImageView) findViewById(R.id.imageView);
+        focusTask startFocusing = new focusTask();
+        
     }
 
     @Override
@@ -120,8 +140,6 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         mRgba = inputFrame.rgba();
 
         Imgproc.cvtColor(mRgba, imgGray, Imgproc.COLOR_RGB2GRAY);
-        //Log.i(""+imgGray.width(), ""+imgGray.height());
-        //Core.flip(imgGray, imgGray2, 1);
         Core.rotate(imgGray, imgGrayFinal, Core.ROTATE_90_CLOCKWISE);
         imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
         //Imgproc.Canny(imgGray2, imgCanny, 127, 255);
@@ -152,5 +170,49 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         Core.meanStdDev(temp, median , std);
 
         return Math.pow(std.get(0,0)[0],2);
+    }
+
+    class focusTask extends AsyncTask<Void,Void,Void> {
+        private String instruction = "";
+        private double focusValue = 0.0;
+        private boolean toContinue = true;
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try{
+                socket = new Socket(ip, 5000);
+                socket.setSoTimeout(1000);
+                Log.i("SOCKET", ""+socket.isConnected());
+                bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                printWriter = new PrintWriter(socket.getOutputStream());
+                while(toContinue) {
+                    instruction = bufferedReader.readLine();
+                    Log.i("SOCKET READ", instruction);
+                    if (instruction != null) {
+                        if (instruction == "N") {
+                            imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
+                            focusValue = varianceOfLaplacian(imgGraySmall);
+                            if (focusValue >= bestFocusValue) {
+                                bestFocusValue = focusValue;
+                                bestStep = stepCounter;
+                            }
+                            stepCounter += 1;
+                            //printWriter.write(doneAck);
+                            //printWriter.flush();
+
+                        } else if (instruction == "F") {
+                            toContinue = false;
+                            printWriter.write(""+bestStep);
+                            printWriter.flush();
+                        }
+                    }
+                }
+                socket.close();
+                printWriter.close();
+            }catch (IOException ioe){
+                Log.i("SOCKET", ""+socket.isConnected());
+                Log.e("IOE", ""+ioe);
+            }
+            return null;
+        }
     }
 }
