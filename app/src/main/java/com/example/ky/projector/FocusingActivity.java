@@ -36,11 +36,11 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
     private static Socket socket;
     private static BufferedReader bufferedReader;
     private static PrintWriter printWriter;
-    private static String ip = "1234";
+    private static String ip = "192.168.4.1";
     private static int stepCounter = 0;
     private static int bestStep = 0;
     private static double bestFocusValue = 0.0;
-    private static String doneAck = "D";
+    private static String doneAck = "$D%";
 
 
     JavaCameraView javaCameraView;
@@ -93,8 +93,8 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         focusValue = (TextView) findViewById(R.id.focusValue);
         frameCounter = 0;
         smallImg = (ImageView) findViewById(R.id.imageView);
-        //focusTask startFocusing = new focusTask();
-        //focusTask.execute();
+        focusTask startFocusing = new focusTask();
+        startFocusing.execute();
     }
 
     @Override
@@ -157,7 +157,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                     double fv = varianceOfLaplacian(imgGrayFinal);
                     DecimalFormat df = new DecimalFormat("0.00");
                     focusValue.setText(df.format(fv));
-                    Log.i("Focus Val", ""+fv);
+                    Log.i(TAG, "Focus val: "+fv);
                     bitmap = Bitmap.createBitmap(imgGraySmall.cols(), imgGraySmall.rows(), Bitmap.Config.ARGB_8888);
                     Utils.matToBitmap(imgGraySmall, bitmap);
 
@@ -187,18 +187,19 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         @Override
         protected Void doInBackground(Void... voids) {
             try{
-                socket = new Socket(ip, 5000);
-                socket.setSoTimeout(1000);
-                Log.i("SOCKET", ""+socket.isConnected());
+                socket = new Socket(ip, 66);
+                socket.setSoTimeout(60000);
+                Log.i(TAG, "Socket connected: "+socket.isConnected());
                 bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 printWriter = new PrintWriter(socket.getOutputStream());
                 while(toContinue) {
                     instruction = bufferedReader.readLine();
-                    Log.i("SOCKET READ", instruction);
+                    Log.i(TAG, "Socket read: "+instruction);
                     if (instruction != null) {
                         if (instruction.equals("N")) {
                             imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
                             focusValue = varianceOfLaplacian(imgGraySmall);
+                            Log.i(TAG, "focus value: " + focusValue + ", step: "+stepCounter);
                             if (focusValue >= bestFocusValue) {
                                 bestFocusValue = focusValue;
                                 bestStep = stepCounter;
@@ -209,7 +210,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
 
                         } else if (instruction.equals("F")) {
                             toContinue = false;
-                            printWriter.write(""+bestStep);
+                            printWriter.write("$"+bestStep+"%");
                             printWriter.flush();
                             Intent i = new Intent(FocusingActivity.this, DoneActivity.class);
                             startActivity(i);
@@ -219,8 +220,8 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                 socket.close();
                 printWriter.close();
             }catch (IOException ioe){
-                Log.i("SOCKET", ""+socket.isConnected());
-                Log.e("IOE", ""+ioe);
+                //Log.i("SOCKET", ""+socket.isConnected());
+                Log.e(TAG, ""+ioe);
             }
             return null;
         }
