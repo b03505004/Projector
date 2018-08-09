@@ -47,7 +47,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
     Mat mRgba, imgGray, imgGraySmall, imgGrayFinal;//, imgCanny;
     TextView focusValue;
     int frameCounter;
-    ImageView smallImg;
+    //ImageView smallImg;
     Bitmap bitmap;
 
 
@@ -92,7 +92,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
 
         focusValue = (TextView) findViewById(R.id.focusValue);
         frameCounter = 0;
-        smallImg = (ImageView) findViewById(R.id.imageView);
+        //smallImg = (ImageView) findViewById(R.id.imageView);
         focusTask startFocusing = new focusTask();
         startFocusing.execute();
     }
@@ -161,7 +161,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                     bitmap = Bitmap.createBitmap(imgGraySmall.cols(), imgGraySmall.rows(), Bitmap.Config.ARGB_8888);
                     Utils.matToBitmap(imgGraySmall, bitmap);
 
-                    smallImg.setImageBitmap(bitmap);
+                    //smallImg.setImageBitmap(bitmap);
                 }
             });
         }
