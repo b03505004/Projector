@@ -15,6 +15,7 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.transitionseverywhere.Fade;
 import com.transitionseverywhere.Recolor;
@@ -32,8 +33,8 @@ public class MainActivity extends AppCompatActivity{
     private static  String TAG = "MainActivity";
     Button startFocus;
     Animation welcome_fade_out, icon_fade;
-    ConstraintLayout start_layout;
-    ImageView icon;
+    //ConstraintLayout start_layout;
+    //ImageView icon;
     private static Socket socket;
     private static PrintWriter printWriter;
     private static String ip = "192.168.4.1";
@@ -48,10 +49,12 @@ public class MainActivity extends AppCompatActivity{
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main);
+        String message = "Tap the button to start focusing";
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
         /**Start animation**/
         //final ViewGroup transitionsContainer = (ViewGroup) findViewById(R.id.transitions_container);
-        start_layout = (ConstraintLayout) findViewById(R.id.start_animation_layout);
-        icon = (ImageView) findViewById(R.id.autoFocusIcon);
+        //start_layout = (ConstraintLayout) findViewById(R.id.start_animation_layout);
+        //icon = (ImageView) findViewById(R.id.autoFocusIcon);
         /*TransitionSet set = new TransitionSet()
                 .addTransition(new Scale(0.7f))
                 .addTransition(new Fade())
@@ -60,11 +63,11 @@ public class MainActivity extends AppCompatActivity{
         start_layout.setVisibility(View.VISIBLE);
         start_layout.setVisibility(View.INVISIBLE);*/
 
-        welcome_fade_out = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.welcome_fade_out);
+        /*welcome_fade_out = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.welcome_fade_out);
         icon_fade = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_right);
 
-        start_layout = (ConstraintLayout) findViewById(R.id.start_animation_layout);
-        icon = (ImageView) findViewById(R.id.autoFocusIcon);
+        //start_layout = (ConstraintLayout) findViewById(R.id.start_animation_layout);
+        //icon = (ImageView) findViewById(R.id.autoFocusIcon);
         welcome_fade_out.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
@@ -82,7 +85,7 @@ public class MainActivity extends AppCompatActivity{
 
             }
         });
-        start_layout.startAnimation(welcome_fade_out);
+        start_layout.startAnimation(welcome_fade_out);*/
 
 
         startFocus = (Button) findViewById(R.id.focusButton);
