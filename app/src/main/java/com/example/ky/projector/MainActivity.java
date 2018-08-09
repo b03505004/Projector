@@ -31,7 +31,7 @@ import java.net.Socket;
 
 public class MainActivity extends AppCompatActivity{
     private static  String TAG = "MainActivity";
-    Button startFocus;
+    ImageView startFocus;
     Animation welcome_fade_out, icon_fade;
     //ConstraintLayout start_layout;
     //ImageView icon;
@@ -88,7 +88,7 @@ public class MainActivity extends AppCompatActivity{
         start_layout.startAnimation(welcome_fade_out);*/
 
 
-        startFocus = (Button) findViewById(R.id.focusButton);
+        startFocus = (ImageView) findViewById(R.id.focusButton);
         startFocus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
