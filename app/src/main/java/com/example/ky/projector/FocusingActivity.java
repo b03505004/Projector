@@ -44,7 +44,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
 
 
     JavaCameraView javaCameraView;
-    Mat mRgba, imgGray, imgGraySmall, imgGrayFinal;//, imgCanny;
+    Mat mRgba, imgGray, imgGraySmall, imgGrayFinal;//, imgCanny, rotatedMRGB;
     TextView focusValue;
     int frameCounter;
     //ImageView smallImg;
@@ -133,6 +133,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         imgGray = new Mat(height-400, width-400, CvType.CV_8UC1);
         imgGraySmall = new Mat(height-400, width-400, CvType.CV_8UC1);
         imgGrayFinal = new Mat(height, width, CvType.CV_8UC1);
+        //rotatedMRGB = new Mat(width, height, CvType.CV_8UC4);
         //imgCanny = new Mat(height, width, CvType.CV_8UC1);
     }
 
@@ -147,7 +148,9 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
 
         Imgproc.cvtColor(mRgba, imgGray, Imgproc.COLOR_RGB2GRAY);
         Core.rotate(imgGray, imgGrayFinal, Core.ROTATE_90_CLOCKWISE);
+        //Core.rotate(mRgba, rotatedMRGB, Core.ROTATE_90_CLOCKWISE);
         imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
+
         //Imgproc.Canny(imgGray2, imgCanny, 127, 255);
         if(frameCounter==30) {
             frameCounter = 0;
@@ -167,7 +170,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         }
         frameCounter+=1;
 
-        return imgGrayFinal;
+        return imgGraySmall;
     }
 
     public double varianceOfLaplacian(Mat img){
