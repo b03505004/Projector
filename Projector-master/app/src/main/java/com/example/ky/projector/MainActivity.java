@@ -38,11 +38,12 @@ public class MainActivity extends AppCompatActivity{
     private static Socket socket;
     private static PrintWriter printWriter;
     private static String ip = "192.168.4.1";
-    private static String startCode = "$S%\n";
+    private static String startCode = "$S%";
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.i(TAG, "Start");
 
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);

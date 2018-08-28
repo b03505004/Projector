@@ -39,7 +39,6 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
     private static String ip = "192.168.4.1";
     private static int stepCounter = 0;
     private static int bestStep = 0;
-    private static double bestFocusValue = 0.0;
     private static String doneAck = "$D%";
 
 
@@ -147,7 +146,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
 
         Imgproc.cvtColor(mRgba, imgGray, Imgproc.COLOR_RGB2GRAY);
         Core.rotate(imgGray, imgGrayFinal, Core.ROTATE_90_CLOCKWISE);
-        imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
+        imgGraySmall = imgGrayFinal.submat(200, 880, 300, 980);
         //Imgproc.Canny(imgGray2, imgCanny, 127, 255);
         if(frameCounter==30) {
             frameCounter = 0;
@@ -182,8 +181,33 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
 
     class focusTask extends AsyncTask<Void,Void,Void> {
         private String instruction = "";
+        private String GoUP = "U";
+        private String GoDOWN = "D";
+        private String ToTOP = "T";
+        private String ToBOTTOM = "B";
+        private String FINISHED = "F";
         private double focusValue = 0.0;
+        private double bestFocusValue = 0.0;
         private boolean toContinue = true;
+        private boolean toFineTune = true;
+        private boolean toLimit = true;
+        private int state = 0; // 0 = normal situation, 1 = best is bottom, 2 = best is top
+        private int continuousBetter = 0;
+        private int continuousWorse = 0;
+        private int score = 0;
+
+        protected boolean calculateFocusValue(){
+            imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
+            focusValue = varianceOfLaplacian(imgGraySmall);
+            Log.i(TAG, "focus value: " + focusValue + ", step: "+stepCounter);
+            if (focusValue >= bestFocusValue) {
+                bestFocusValue = focusValue;
+                bestStep = stepCounter;
+                return true;
+            }
+            return false;
+        }
+
         @Override
         protected Void doInBackground(Void... voids) {
             try{
@@ -192,33 +216,67 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                 Log.i(TAG, "Socket connected: "+socket.isConnected());
                 bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 printWriter = new PrintWriter(socket.getOutputStream());
-                while(toContinue) {
+                while(toContinue){
                     instruction = bufferedReader.readLine();
                     Log.i(TAG, "Socket read: "+instruction);
                     if (instruction != null) {
+                        // instruction: N = start, T = top, B = bottom, K = k
+                        // send: U = up, D = down, F = finish
                         if (instruction.equals("N")) {
-                            imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
-                            focusValue = varianceOfLaplacian(imgGraySmall);
-                            Log.i(TAG, "focus value: " + focusValue + ", step: "+stepCounter);
-                            if (focusValue >= bestFocusValue) {
-                                bestFocusValue = focusValue;
-                                bestStep = stepCounter;
-                            }
+                            calculateFocusValue();
                             stepCounter += 1;
                             //printWriter.write(doneAck);
                             //printWriter.flush();
 
-                        } else if (instruction.equals("F")) {
+                        } else if (instruction.equals("T")) {
                             toContinue = false;
+                            calculateFocusValue();
+
+                            if (bestStep == stepCounter){
+                                state = 2;
+                            } else if (bestStep == 0){
+                                state = 1;
+                            }
                             printWriter.write("$"+bestStep+"%");
                             printWriter.flush();
-                            Intent i = new Intent(FocusingActivity.this, DoneActivity.class);
-                            startActivity(i);
+                            Log.i(TAG, "Best step: "+"$"+bestStep+"%");
+                            //Intent i = new Intent(FocusingActivity.this, DoneActivity.class);
+                            //startActivity(i);
                         }
                     }
                 }
+                // instruction: K = k
+                // send: U = up, D = down, F = finish, T = to TOP, B = to BOTTOM
+                // 0 = normal situation, 1 = best is bottom, 2 = best is top
+                /*while(toFineTune){
+                    if (state == 1){
+                        printWriter.write("$"+GoUP+"%");
+                        printWriter.flush();
+                        instruction = bufferedReader.readLine();
+                        Log.i(TAG, "Socket read: "+instruction);
+                        if (instruction != null) {
+                            if (instruction.equals("K")) {
+                                if (calculateFocusValue()){ // moving up is better
+
+                                } else { // moving down is better
+
+                                }
+                            }
+                        }
+                    } else if (state == 2){
+                        printWriter.write("$"+GoDOWN+"%");
+                        printWriter.flush();
+                    } else if (state == 0){
+
+                    }
+                }*/
+                printWriter.write("$"+FINISHED+"%");
+                printWriter.flush();
+                Log.i(TAG, "Finish code: "+"$"+FINISHED+"%");
                 socket.close();
                 printWriter.close();
+                Intent i = new Intent(FocusingActivity.this, DoneActivity.class);
+                startActivity(i);
             }catch (IOException ioe){
                 //Log.i("SOCKET", ""+socket.isConnected());
                 Log.e(TAG, ""+ioe);
