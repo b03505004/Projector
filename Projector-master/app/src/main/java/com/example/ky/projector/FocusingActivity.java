@@ -248,8 +248,62 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                 // instruction: K = k
                 // send: U = up, D = down, F = finish, T = to TOP, B = to BOTTOM
                 // 0 = normal situation, 1 = best is bottom, 2 = best is top
-                /*while(toFineTune){
+                ///*
+                boolean justStarted = true;
+                while(toFineTune){
                     if (state == 1){
+                        printWriter.write("$"+GoUP+"%");
+                        printWriter.flush();
+                        instruction = bufferedReader.readLine();
+                        Log.i(TAG, "Socket read: "+instruction);
+                        if (instruction != null) {
+                            if (instruction.equals("K")) {
+                                if (calculateFocusValue()){ // moving up is better
+                                    if(justStarted){
+                                        justStarted = false;
+                                    }
+                                } else { // moving down is better
+                                    if(justStarted){
+                                        toFineTune = false;
+                                        printWriter.write("$"+ToBOTTOM+"%");
+                                        printWriter.flush();
+                                    } else {
+                                        toFineTune = false;
+                                        printWriter.write("$"+GoDOWN+"%");
+                                        printWriter.flush();
+                                        instruction = bufferedReader.readLine();
+                                        Log.i(TAG, "Socket read: "+instruction);
+                                    }
+                                }
+                            }
+                        }
+                    } else if (state == 2){
+                        printWriter.write("$"+GoDOWN+"%");
+                        printWriter.flush();
+                        instruction = bufferedReader.readLine();
+                        Log.i(TAG, "Socket read: "+instruction);
+                        if (instruction != null) {
+                            if (instruction.equals("K")) {
+                                if (calculateFocusValue()){ // moving down is better
+                                    if(justStarted) {
+                                        justStarted = false;
+                                    }
+                                } else { // moving up is better
+                                    if(justStarted){
+                                        toFineTune = false;
+                                        printWriter.write("$"+ToTOP+"%");
+                                        printWriter.flush();
+                                    } else {
+                                        toFineTune = false;
+                                        printWriter.write("$"+GoUP+"%");
+                                        printWriter.flush();
+                                        instruction = bufferedReader.readLine();
+                                        Log.i(TAG, "Socket read: "+instruction);
+                                    }
+                                }
+                            }
+                        }
+                    } else if (state == 0){
                         printWriter.write("$"+GoUP+"%");
                         printWriter.flush();
                         instruction = bufferedReader.readLine();
@@ -259,17 +313,13 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                                 if (calculateFocusValue()){ // moving up is better
 
                                 } else { // moving down is better
-
+                                    state = 2;
                                 }
                             }
                         }
-                    } else if (state == 2){
-                        printWriter.write("$"+GoDOWN+"%");
-                        printWriter.flush();
-                    } else if (state == 0){
-
                     }
-                }*/
+                }
+                //*/
                 printWriter.write("$"+FINISHED+"%");
                 printWriter.flush();
                 Log.i(TAG, "Finish code: "+"$"+FINISHED+"%");
