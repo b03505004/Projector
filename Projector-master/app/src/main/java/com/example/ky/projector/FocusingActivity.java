@@ -156,7 +156,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                     double fv = varianceOfLaplacian(imgGrayFinal);
                     DecimalFormat df = new DecimalFormat("0.00");
                     focusValueTV.setText(df.format(fv));
-                    Log.i(TAG, "Focus val: "+fv);
+                    //Log.i(TAG, "Focus val: "+fv);
                     bitmap = Bitmap.createBitmap(imgGraySmall.cols(), imgGraySmall.rows(), Bitmap.Config.ARGB_8888);
                     Utils.matToBitmap(imgGraySmall, bitmap);
 
@@ -197,6 +197,12 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         private int score = 0;
 
         protected boolean calculateFocusValue(){
+            /*Log.i(TAG, "BEFORE: " + System.currentTimeMillis());
+            for(long i =0 ; i<100000000; i++){
+                long a = i;
+            }
+            Log.i(TAG, "AFTER : " + System.currentTimeMillis());*/
+
             imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
             focusValue = varianceOfLaplacian(imgGraySmall);
             Log.i(TAG, "focus value: " + focusValue + ", step: "+stepCounter);
@@ -212,22 +218,44 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         protected Void doInBackground(Void... voids) {
             try{
                 socket = new Socket(ip, 66);
-                socket.setSoTimeout(60000);
+                socket.setSoTimeout(1200000);
                 Log.i(TAG, "Socket connected: "+socket.isConnected());
                 bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 printWriter = new PrintWriter(socket.getOutputStream());
                 while(toContinue){
+                    //i = bufferedReader.read();
                     instruction = bufferedReader.readLine();
                     Log.i(TAG, "Socket read: "+instruction);
                     if (instruction != null) {
                         // instruction: N = start, T = top, B = bottom, K = k
                         // send: U = up, D = down, F = finish
                         if (instruction.equals("N")) {
-                            calculateFocusValue();
+
+                            if(!calculateFocusValue()){
+                                continuousWorse += 1;
+                            }
                             stepCounter += 1;
                             //printWriter.write(doneAck);
                             //printWriter.flush();
+                            if(continuousWorse>3){
+                                toContinue = false;
+                                calculateFocusValue();
 
+                                if (bestStep == stepCounter){
+                                    state = 2;
+                                } else if (bestStep == 0){
+                                    state = 1;
+                                }
+                                String formattedBestStep = String.format("%02d", stepCounter - bestStep);
+                                printWriter.write("$"+formattedBestStep+"%");
+                                printWriter.flush();
+                                Log.i(TAG, "Continuous worse!");
+                                Log.i(TAG, "Best step: "+"$"+formattedBestStep+"%");
+                            } else{
+                                printWriter.write("$"+GoUP+"%");
+                                printWriter.flush();
+                                Log.i(TAG, "Sent: " + GoUP);
+                            }
                         } else if (instruction.equals("T")) {
                             toContinue = false;
                             calculateFocusValue();
@@ -237,9 +265,10 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                             } else if (bestStep == 0){
                                 state = 1;
                             }
-                            printWriter.write("$"+bestStep+"%");
+                            String formattedBestStep = String.format("%02d", stepCounter - bestStep);
+                            printWriter.write("$"+formattedBestStep+"%");
                             printWriter.flush();
-                            Log.i(TAG, "Best step: "+"$"+bestStep+"%");
+                            Log.i(TAG, "Best step: "+"$"+formattedBestStep+"%");
                             //Intent i = new Intent(FocusingActivity.this, DoneActivity.class);
                             //startActivity(i);
                         }
@@ -249,75 +278,94 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                 // send: U = up, D = down, F = finish, T = to TOP, B = to BOTTOM
                 // 0 = normal situation, 1 = best is bottom, 2 = best is top
                 ///*
-                boolean justStarted = true;
-                while(toFineTune){
-                    if (state == 1){
-                        printWriter.write("$"+GoUP+"%");
-                        printWriter.flush();
-                        instruction = bufferedReader.readLine();
-                        Log.i(TAG, "Socket read: "+instruction);
-                        if (instruction != null) {
-                            if (instruction.equals("K")) {
-                                if (calculateFocusValue()){ // moving up is better
-                                    if(justStarted){
-                                        justStarted = false;
-                                    }
-                                } else { // moving down is better
-                                    if(justStarted){
-                                        toFineTune = false;
-                                        printWriter.write("$"+ToBOTTOM+"%");
-                                        printWriter.flush();
-                                    } else {
-                                        toFineTune = false;
-                                        printWriter.write("$"+GoDOWN+"%");
-                                        printWriter.flush();
-                                        instruction = bufferedReader.readLine();
-                                        Log.i(TAG, "Socket read: "+instruction);
-                                    }
-                                }
-                            }
-                        }
-                    } else if (state == 2){
-                        printWriter.write("$"+GoDOWN+"%");
-                        printWriter.flush();
-                        instruction = bufferedReader.readLine();
-                        Log.i(TAG, "Socket read: "+instruction);
-                        if (instruction != null) {
-                            if (instruction.equals("K")) {
-                                if (calculateFocusValue()){ // moving down is better
-                                    if(justStarted) {
-                                        justStarted = false;
-                                    }
-                                } else { // moving up is better
-                                    if(justStarted){
-                                        toFineTune = false;
-                                        printWriter.write("$"+ToTOP+"%");
-                                        printWriter.flush();
-                                    } else {
-                                        toFineTune = false;
-                                        printWriter.write("$"+GoUP+"%");
-                                        printWriter.flush();
-                                        instruction = bufferedReader.readLine();
-                                        Log.i(TAG, "Socket read: "+instruction);
-                                    }
-                                }
-                            }
-                        }
-                    } else if (state == 0){
-                        printWriter.write("$"+GoUP+"%");
-                        printWriter.flush();
-                        instruction = bufferedReader.readLine();
-                        Log.i(TAG, "Socket read: "+instruction);
-                        if (instruction != null) {
-                            if (instruction.equals("K")) {
-                                if (calculateFocusValue()){ // moving up is better
 
-                                } else { // moving down is better
-                                    state = 2;
+                instruction = bufferedReader.readLine();
+                Log.i(TAG, "Socket read: "+instruction);
+                if (instruction != null) {
+                    if(instruction.equals("K")) {
+                        boolean justStarted = true;
+                        Log.i(TAG, "FINETUNE");
+                        while (toFineTune) {
+                            if (state == 1) {
+                                printWriter.write("$" + GoUP + "%");
+                                printWriter.flush();
+                                Log.i(TAG, "Sent: " + GoUP);
+                                instruction = bufferedReader.readLine();
+                                Log.i(TAG, "Socket read: " + instruction);
+                                if (instruction != null) {
+                                    if (instruction.equals("K")) {
+                                        if (calculateFocusValue()) { // moving up is better
+                                            if (justStarted) {
+                                                justStarted = false;
+                                            }
+                                        } else { // moving down is better
+                                            if (justStarted) {
+                                                toFineTune = false;
+                                                printWriter.write("$" + ToBOTTOM + "%");
+                                                printWriter.flush();
+                                                Log.i(TAG, "Sent: " + ToBOTTOM);
+                                            } else {
+                                                toFineTune = false;
+                                                printWriter.write("$" + GoDOWN + "%");
+                                                printWriter.flush();
+                                                Log.i(TAG, "Sent: " + GoDOWN);
+                                                instruction = bufferedReader.readLine();
+                                                Log.i(TAG, "Socket read: " + instruction);
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (state == 2) {
+                                printWriter.write("$" + GoDOWN + "%");
+                                printWriter.flush();
+                                Log.i(TAG, "Sent: " + GoDOWN);
+                                instruction = bufferedReader.readLine();
+                                Log.i(TAG, "Socket read: " + instruction);
+                                if (instruction != null) {
+                                    if (instruction.equals("K")) {
+                                        if (calculateFocusValue()) { // moving down is better
+                                            if (justStarted) {
+                                                justStarted = false;
+                                            }
+                                        } else { // moving up is better
+                                            if (justStarted) {
+                                                toFineTune = false;
+                                                printWriter.write("$" + ToTOP + "%");
+                                                printWriter.flush();
+                                                Log.i(TAG, "Sent: " + ToTOP);
+                                            } else {
+                                                toFineTune = false;
+                                                printWriter.write("$" + GoUP + "%");
+                                                printWriter.flush();
+                                                Log.i(TAG, "Sent: " + GoUP);
+                                                instruction = bufferedReader.readLine();
+                                                Log.i(TAG, "Socket read: " + instruction);
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (state == 0) {
+                                justStarted = false;
+                                printWriter.write("$" + GoUP + "%");
+                                printWriter.flush();
+                                Log.i(TAG, "Sent: " + GoUP);
+                                instruction = bufferedReader.readLine();
+                                Log.i(TAG, "Socket read: " + instruction);
+                                if (instruction != null) {
+                                    if (instruction.equals("K")) {
+                                        if (calculateFocusValue()) { // moving up is better
+
+                                        } else { // moving down is better
+                                            state = 1;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                } else {
+                    Log.e(TAG, "ERROR");
+
                 }
                 //*/
                 printWriter.write("$"+FINISHED+"%");
