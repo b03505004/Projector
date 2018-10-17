@@ -40,6 +40,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
     private static int stepCounter = 0;
     private static int bestStep = 0;
     private static String doneAck = "$D%";
+    private static Boolean nextFrame = true;
 
 
     JavaCameraView javaCameraView;
@@ -130,7 +131,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
         imgGray = new Mat(height-400, width-400, CvType.CV_8UC1);
-        imgGraySmall = new Mat(height-400, width-400, CvType.CV_8UC1);
+        //imgGraySmall = new Mat(height-400, width-400, CvType.CV_8UC1);
         imgGrayFinal = new Mat(height, width, CvType.CV_8UC1);
         //imgCanny = new Mat(height, width, CvType.CV_8UC1);
     }
@@ -143,12 +144,11 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
-
         Imgproc.cvtColor(mRgba, imgGray, Imgproc.COLOR_RGB2GRAY);
         Core.rotate(imgGray, imgGrayFinal, Core.ROTATE_90_CLOCKWISE);
-        imgGraySmall = imgGrayFinal.submat(200, 880, 300, 980);
+        //imgGraySmall = imgGrayFinal.submat(300, 980, 300, 980);
         //Imgproc.Canny(imgGray2, imgCanny, 127, 255);
-        if(frameCounter==30) {
+        /*if(frameCounter==30) {
             frameCounter = 0;
             runOnUiThread(new Runnable() {
                 @Override
@@ -164,8 +164,9 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                 }
             });
         }
-        frameCounter+=1;
+        frameCounter+=1;*/
 
+        nextFrame = true;
         return imgGrayFinal;
     }
 
@@ -202,12 +203,33 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                 long a = i;
             }
             Log.i(TAG, "AFTER : " + System.currentTimeMillis());*/
+            Log.i(TAG, "________________________ step: "+stepCounter+" ________________________");
+            int timeToAverage = 5;
+            double focusValueTotal = 0.0;
+            for(int i=0; i<timeToAverage; i++) {
+                nextFrame = false;
+                while (!nextFrame){}
+                imgGraySmall = imgGrayFinal.submat(220, 700, 400, 880);
+                focusValue = varianceOfLaplacian(imgGraySmall);
+                Log.i(TAG, "focus value: " + focusValue + ", i: "+i);
+                focusValueTotal += focusValue;
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    DecimalFormat df = new DecimalFormat("0.00");
+                    focusValueTV.setText(df.format(focusValue));
+                    //Log.i(TAG, "Focus val: "+fv);
+                    bitmap = Bitmap.createBitmap(imgGraySmall.cols(), imgGraySmall.rows(), Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(imgGraySmall, bitmap);
 
-            imgGraySmall = imgGrayFinal.submat(200, 880, 200, 880);
-            focusValue = varianceOfLaplacian(imgGraySmall);
-            Log.i(TAG, "focus value: " + focusValue + ", step: "+stepCounter);
-            if (focusValue >= bestFocusValue) {
-                bestFocusValue = focusValue;
+                    smallImg.setImageBitmap(bitmap);
+                }
+            });
+            Log.i(TAG, "average: " + focusValueTotal/5.0);
+            Log.i(TAG, "__________________________________________________________");
+            if (focusValueTotal >= bestFocusValue) {
+                bestFocusValue = focusValueTotal;
                 bestStep = stepCounter;
                 return true;
             }
@@ -218,7 +240,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
         protected Void doInBackground(Void... voids) {
             try{
                 socket = new Socket(ip, 66);
-                socket.setSoTimeout(1200000);
+                socket.setSoTimeout(12000000);
                 Log.i(TAG, "Socket connected: "+socket.isConnected());
                 bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 printWriter = new PrintWriter(socket.getOutputStream());
@@ -237,7 +259,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                             stepCounter += 1;
                             //printWriter.write(doneAck);
                             //printWriter.flush();
-                            if(continuousWorse>3){
+                            if(continuousWorse>=3){
                                 toContinue = false;
                                 calculateFocusValue();
 
@@ -246,10 +268,10 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                                 } else if (bestStep == 0){
                                     state = 1;
                                 }
-                                String formattedBestStep = String.format("%02d", stepCounter - bestStep);
+                                String formattedBestStep = String.format("%02d", stepCounter - bestStep + 1);
                                 printWriter.write("$"+formattedBestStep+"%");
                                 printWriter.flush();
-                                Log.i(TAG, "Continuous worse!");
+                                Log.i(TAG, "Continuous worse!"+continuousWorse);
                                 Log.i(TAG, "Best step: "+"$"+formattedBestStep+"%");
                             } else{
                                 printWriter.write("$"+GoUP+"%");
@@ -265,7 +287,7 @@ public class FocusingActivity extends AppCompatActivity implements CameraBridgeV
                             } else if (bestStep == 0){
                                 state = 1;
                             }
-                            String formattedBestStep = String.format("%02d", stepCounter - bestStep);
+                            String formattedBestStep = String.format("%02d", stepCounter - bestStep - 1);
                             printWriter.write("$"+formattedBestStep+"%");
                             printWriter.flush();
                             Log.i(TAG, "Best step: "+"$"+formattedBestStep+"%");

@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Projector</string>
     <string name="focusB">Start focusing!</string>
-    <string name="fm">focus val</string>
+    <string name="fm">......</string>
     <string name="done">DONE!</string>
 </resources>
